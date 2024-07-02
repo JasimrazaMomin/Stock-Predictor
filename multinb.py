@@ -1,4 +1,5 @@
 import re
+import copy
 # def get_feature_vector(str):
 #     irrelevant_word = {'a': 1, 'the' : 1, 'to' : 1, 'and' : 1, 'or' : 1, 'so' : 1, 'is' : 1, 'an' : 1, 'this' : 1, 'that' : 1, 'these' : 1, 'those' : 1, 'in': 1, 'as':1, 'also':1, 'i' : 1}
 #     feature_dict = dict()
@@ -78,3 +79,26 @@ for data in test_data:
 # getting class probabilities
 probability_positive = positive_counter / (positive_counter + negative_counter)
 probability_negative = 1 - probability_positive
+
+# track id of headline
+id = 0
+
+# make vocab into a dictionary for feature vectors
+vocab_dict = dict()
+for item in vocab:
+    vocab_dict[item] = 0
+
+# feature vector dictionary (for all documents), will go id : [class, feature vector]
+feature_vectors = dict()
+
+for data in test_data:
+    broken_string = data[2].split()
+    feature_vectors[id] = [data[1],copy.deepcopy(vocab_dict)]
+    for word in broken_string:
+        if word in feature_vectors[id][1]:
+            feature_vectors[id][1][word] += 1
+    id += 1
+
+# for vector in feature_vectors:
+#     print(feature_vectors[vector][1])
+#     print()
