@@ -1,22 +1,39 @@
 import re
 import copy
 import json
-# def get_feature_vector(str):
-#     irrelevant_word = {'a': 1, 'the' : 1, 'to' : 1, 'and' : 1, 'or' : 1, 'so' : 1, 'is' : 1, 'an' : 1, 'this' : 1, 'that' : 1, 'these' : 1, 'those' : 1, 'in': 1, 'as':1, 'also':1, 'i' : 1}
-#     feature_dict = dict()
-#     str = str.split()
-#     total_words = 0
-#     unique_values = 0
-#     for word in str:
-#         if word.lower() in irrelevant_word:
-#             continue
-#         total_words +=1 
-#         if word in feature_dict:
-#             feature_dict[word] += 1
-#         else:
-#             feature_dict[word] = 1
-#             unique_values += 1
-#     return (feature_dict,total_words,unique_values)
+import math
+
+def get_feature_vector(feature_string,vocab):
+    feature_string = feature_string.lower()
+    feature_string = re.sub(r'[^a-z0-9 ]', '', feature_string)
+    feature_string_list = feature_string.split()
+    feature_vector = copy.deepcopy(vocab)
+    for word in feature_string_list:
+        if word in feature_vector:
+            feature_vector += 1
+    return feature_vector
+    
+def prediction(feature_string,prob_word_dict,prob_class_dict,vocab):
+    # feature string gets turned into feature vector
+    # prob_word_dict will be class : conditional dict we made, so we will have 2 keys, positive and negative
+    # prob_class_dict will be the class : class probability, since stored separate in json, we will have to make a dict positive : prob, negative : prob
+    # vocab is stored in json so easy to get
+    feature_vector = get_feature_vector(feature_string,vocab)
+    summed_logarithmic_probability = 0
+    probabilites = dict()
+    for class_name in prob_class_dict:
+        for word in vocab:
+            if word in feature_vector and word in prob_word_dict[class_name]:
+                summed_logarithmic_probability += (feature_vector[word])*(math.log(prob_word_dict[class_name][word]))
+        probabilites[class_name] = math.log(prob_class_dict[class_name]) + summed_logarithmic_probability
+        summed_logarithmic_probability = 0
+    prob_max = 0
+    prob_name = ""
+    for prob in probabilites:
+        if probabilites[prob] > prob_max:
+            prob_max = probabilites[prob]
+            prob_name = prob
+    return (prob_name,prob_max)
 
 test_data = [["8",0,"The lyrics of the song sounded like fingernails on a chalkboard."],
              ["4",0,"The old rusted farm equipment surrounded the house predicting its demise."],
