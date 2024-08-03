@@ -1,30 +1,25 @@
-import re
-import copy
 import json
 import math
 
-def get_feature_vector(feature_string,vocab):
-    feature_string = feature_string.lower()
-    feature_string = re.sub(r'[^a-z0-9 ]', '', feature_string)
-    feature_string_list = feature_string.split()
-    feature_vector = copy.deepcopy(vocab)
-    for word in feature_string_list:
+def get_feature_vector(feature_list): # rest of the feature vector changes actually happen here
+    feature_vector = dict()
+    for word in feature_list:
         if word in feature_vector:
-            feature_vector += 1
+            feature_vector[word] += 1
+        else:
+            feature_vector[word] = 1
     return feature_vector
     
-def prediction(feature_string,prob_word_dict,prob_class_dict,vocab):
+def prediction(feature_string_list,prob_conditional_word_dict,prob_class_dict):
     # feature string gets turned into feature vector
     # prob_word_dict will be class : conditional dict we made, so we will have 2 keys, positive and negative
     # prob_class_dict will be the class : class probability, since stored separate in json, we will have to make a dict positive : prob, negative : prob
-    # vocab is stored in json so easy to get
-    feature_vector = get_feature_vector(feature_string,vocab)
+    feature_vector = get_feature_vector(feature_string_list)
     summed_logarithmic_probability = 0
     probabilites = dict()
     for class_name in prob_class_dict:
-        for word in vocab:
-            if word in feature_vector and word in prob_word_dict[class_name]:
-                summed_logarithmic_probability += (feature_vector[word])*(math.log(prob_word_dict[class_name][word]))
+        for word in feature_vector:
+            summed_logarithmic_probability += (feature_vector[word])*(math.log(prob_conditional_word_dict[class_name][word]))
         probabilites[class_name] = math.log(prob_class_dict[class_name]) + summed_logarithmic_probability
         summed_logarithmic_probability = 0
     prob_max = 0
@@ -35,119 +30,60 @@ def prediction(feature_string,prob_word_dict,prob_class_dict,vocab):
             prob_name = prob
     return (prob_name,prob_max)
 
-test_data = [["8",0,"The lyrics of the song sounded like fingernails on a chalkboard."],
-             ["4",0,"The old rusted farm equipment surrounded the house predicting its demise."],
-             ["2",0,"He poured rocks in the dungeon of his mind."],
-             ["160",1,"The fish dreamed of escaping the fishbowl and into the toilet where he saw his friend go."],
-             ["255",1,"Iguanas were falling out of the trees."],
-             ["218",1,"The pigs were insulted that they were named hamburgers."]]
-
-# words that don't change anything in the context of a sentence 
-irrelevant_word = {'a': 1, 'the' : 1, 'to' : 1, 'and' : 1, 'or' : 1, 'so' : 1, 'is' : 1, 'an' : 1, 'this' : 1, 'that' : 1, 'these' : 1, 'those' : 1, 'in': 1, 'as':1, 'also':1, 'i' : 1, 'of' : 1}
-
-# need to clean strings (remove all except letters and numbers and make all words lowercase) 
-
-for data in test_data:
-    data[2] = data[2].lower()
-    data[2] = re.sub(r'[^a-z0-9 ]', '', data[2])
-
-# print(test_data)
-
-# want to keep track of number of docs per classes
-positive_counter = 0 #1
-negative_counter = 0 #0
-
-# need to make a vocab
-# need to get total number of words per class
-# need to get frequency of words per class
-
-vocab = set()
-total_positive_words = 0
-total_negative_words = 0
-word_count_positive = dict()
-word_count_negative = dict()
-
-for data in test_data:
-    broken_string = data[2].split()
-    cleaned_string = list(filter(lambda x: x not in irrelevant_word,broken_string))
-    vocab.update(set(cleaned_string))
-    if data[1] == 1:
-        positive_counter += 1
-        total_positive_words += len(cleaned_string)
-        for word in cleaned_string:
-            if word in word_count_positive:
-                word_count_positive[word] += 1
-            else:
-                word_count_positive[word] = 1
-    else:
-        negative_counter += 1
-        total_negative_words += len(cleaned_string)
-        for word in cleaned_string:
-            if word in word_count_negative:
-                word_count_negative[word] += 1
-            else:
-                word_count_negative[word] = 1
-                
-# print(f"Positive Number: {positive_counter}. Negative Number: {negative_counter}\n\n")
-# print(vocab)
-# print(f"\n\nTotal Positive Words: {total_positive_words}. Total Negative Words: {total_negative_words}\n\n")
-# print(word_count_positive)
-# print(word_count_negative)
-
-# getting class probabilities
-probability_positive = positive_counter / (positive_counter + negative_counter)
-probability_negative = 1 - probability_positive
-
-# track id of headline
-id = 0
-
-# make vocab into a dictionary for feature vectors
-vocab_dict = dict()
-for item in vocab:
-    vocab_dict[item] = 0
-
-# feature vector dictionary (for all documents), will go id : [class, feature vector]
-feature_vectors = dict()
-
-for data in test_data:
-    broken_string = data[2].split()
-    feature_vectors[id] = [data[1],copy.deepcopy(vocab_dict)]
-    for word in broken_string:
-        if word in feature_vectors[id][1]:
-            feature_vectors[id][1][word] += 1
-    id += 1
-
-# for vector in feature_vectors:
-#     print(feature_vectors[vector][1])
-#     print()
-
-# using total pos/neg words as total number of word occurences in a class
-# using word count dict to get number of certain word occurences in a class
-# get constants needed for conditional probabilities 
-smoothing_param = 1
-unique_words = len(vocab)
-
-# to store it all into a json, will make a dict then write into a file
-# first key will be for positive probability, second key for negative probability
-# third key will be for conditionals for positive class, fourth key will be for conditionals for negative class
-# fifth key will be for the vocabulary dict
-
-positive_conditionals = dict()
-negative_conditionals = dict()
-
-# first deal with positive class
-for word in word_count_positive:
-    positive_conditionals[word] = (word_count_positive[word] + smoothing_param) / (total_positive_words + (smoothing_param * unique_words))
+def training(test_data): # data should be passed in as follows [ [date,label,headline], ...]
+    with open('vocab.json','r') as json_file:
+        vocab = json.load(json_file)
     
-# second deal with negative class
-for word in word_count_negative:
-    negative_conditionals[word] = (word_count_negative[word] + smoothing_param) / (total_negative_words + (smoothing_param * unique_words))
+    # want to keep track of number of docs per classes
+    positive_counter = 0 #1
+    negative_counter = 0 #0
+    # need to get total number of words per class
+    total_positive_words = 0
+    total_negative_words = 0
+    # need to get frequency of words per class
+    word_count_positive = dict()
+    word_count_negative = dict()
 
-# since these are all going to turn into floats, we will lose precision, will need to test exactly how much we lose
-# if losing too much (ie strays too far from total 1 probability), can use fraction or decimal library or store numerator and denominator to do division later
+    for data in test_data:
+        if data[1] == 1:
+            positive_counter += 1
+            total_positive_words += len(data[2])
+            for word in data[2]:
+                if word in word_count_positive:
+                    word_count_positive[word] += 1
+                else:
+                    word_count_positive[word] = 1
+        else:
+            negative_counter += 1
+            total_negative_words += len(data[2])
+            for word in data[2]:
+                if word in word_count_negative:
+                    word_count_negative[word] += 1
+                else:
+                    word_count_negative[word] = 1
 
-to_json = {"positive_probability" : probability_positive, 
-           "negative_probability" : probability_negative,
-           "positive_conditional" : positive_conditionals,
-           "negative_conditional" : negative_conditionals,
-           "vocab" : vocab_dict}
+    # getting class probabilities
+    probability_positive = positive_counter / (positive_counter + negative_counter)
+    probability_negative = 1 - probability_positive
+    # laplace smoothing
+    smoothing_param = 1
+    # from calculated vocab
+    unique_words = 56651  
+    
+    # to store it all into a json, will make a dict then write into a file ------- decided to just reutrn the model instead of doing json
+    # first key will be for positive probability, second key for negative probability
+    # third key will be for conditionals for positive class, fourth key will be for conditionals for negative class
+
+    positive_conditionals = dict()
+    negative_conditionals = dict()
+
+    for word in vocab:
+        positive_conditionals[word] = (word_count_positive[word] + smoothing_param) / (total_positive_words + (smoothing_param * unique_words))
+        negative_conditionals[word] = (word_count_negative[word] + smoothing_param) / (total_negative_words + (smoothing_param * unique_words))
+
+    model = {"positive_probability" : probability_positive, 
+            "negative_probability" : probability_negative,
+            "positive_conditional" : positive_conditionals,
+            "negative_conditional" : negative_conditionals}
+    
+    return model
