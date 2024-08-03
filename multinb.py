@@ -78,8 +78,15 @@ def training(test_data): # data should be passed in as follows [ [date,label,hea
     negative_conditionals = dict()
 
     for word in vocab:
-        positive_conditionals[word] = (word_count_positive[word] + smoothing_param) / (total_positive_words + (smoothing_param * unique_words))
-        negative_conditionals[word] = (word_count_negative[word] + smoothing_param) / (total_negative_words + (smoothing_param * unique_words))
+        if word in word_count_positive:
+            positive_conditionals[word] = (word_count_positive[word] + smoothing_param) / (total_positive_words + (smoothing_param * unique_words))
+        else:
+            positive_conditionals[word] = (smoothing_param) / (total_positive_words + (smoothing_param * unique_words))
+        if word in word_count_negative:
+            negative_conditionals[word] = (word_count_negative[word] + smoothing_param) / (total_negative_words + (smoothing_param * unique_words))
+        else:
+            negative_conditionals[word] = (smoothing_param) / (total_negative_words + (smoothing_param * unique_words))
+            
 
     model = {"positive_probability" : probability_positive, 
             "negative_probability" : probability_negative,
