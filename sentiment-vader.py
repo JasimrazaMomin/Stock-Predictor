@@ -4,9 +4,6 @@ from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import pandas as pd
 from datetime import datetime
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
 import requests
 import time as tm
 
@@ -19,11 +16,13 @@ def get_sp500(): #change . to -
     results = soup.findAll(class_="sym svelte-eurwtr")
 
     stock_list = []
-
+    print("Entering loop for ticker finder")
     for result in results:
         children = result.findChildren("a", recursive=False)
         for child in children:
             stock_list.append(child.get_text().replace('.','-'))
+        print("Finished one loop cycle")
+    print("Finished ticker finder")
     return stock_list
 
 def get_compound_info(df,ticker_list):
@@ -64,7 +63,7 @@ def get_compound_info(df,ticker_list):
             print(f"Company: {ticker}, Total: {total_compound}, Count: {count_compound}, Average: {total_compound/count_compound}\n")
 
 def get_sentiment_sp500():
-
+    print("In main function")
     finviz_url = 'https://finviz.com/quote.ashx?t='
 
     ticker_list = get_sp500()
@@ -72,6 +71,7 @@ def get_sentiment_sp500():
     news_tables = dict()
     for ticker in ticker_list:
         url = finviz_url + ticker
+        print(ticker)
         for _ in range(5):  # Retry up to 5 times
             try:
                 req = Request(url=url, headers={'user-agent': 'my-app'})
@@ -131,7 +131,81 @@ def get_sentiment_sp500():
     # plt.show()
     return (mean_df,df)
 
-print(get_sentiment_sp500()) #plotting will get expensive really quickly so might just make a nice looking scale to show the current sentiment (might add drop down showing previous entries)
+def get_ticker_sentiment(ticker):
+    finviz_url = 'https://finviz.com/quote.ashx?t='
+    
+    news_tables = dict()
+    
+    url = finviz_url + ticker
+    req = Request(url=url, headers={'user-agent': 'my-app'})
+    res = urlopen(req)
+    html = BeautifulSoup(res, 'html.parser')
+    news_table = html.find(id='news-table')
+    news_tables[ticker] = news_table
+    
+
+    parsed_data = []
+
+    for ticker, news_table in news_tables.items():
+        
+        for row in news_table.findAll('tr'):
+            
+            headline = row.a.text
+            timestamp = row.td.text.strip().split(" ")
+            
+            if len(timestamp) == 1:
+                time = timestamp[0]
+            else:
+                date = timestamp[0]
+                time = timestamp[1]
+                
+            parsed_data.append([ticker, date, time, headline])
+
+    df = pd.DataFrame(parsed_data, columns=['ticker', 'date', 'time', 'headline'])
+    vader = SentimentIntensityAnalyzer()
+    today = datetime.today().date()
+    todays_date = datetime.today().strftime("%b-%d-%y")
+
+    df['compound'] = df['headline'].apply(lambda x : vader.polarity_scores(x)['compound'])
+    df['date'] = df['date'].apply(lambda x : todays_date if x == 'Today' else x)
+
+    df['date'] = pd.to_datetime(df.date,format="%b-%d-%y").dt.date
+    # print(df.shape)
+    # get_compound_info(df,ticker_list) 
+
+    # plt.figure(figsize=(10,8))
+
+    mean_df = df.groupby(['ticker','date']).mean(numeric_only=True)
+    mean_df = mean_df.unstack()
+    mean_df = mean_df.xs('compound',axis='columns').transpose()
+
+    # mean_df.plot(kind='bar')
+    # plt.show()
+    # print(mean_df.index,mean_df.index.dtype)
+    # print(mean_df.columns,mean_df.columns.dtype)
+    mean_df_shape = mean_df.shape
+    
+    # print(mean_df.iloc[mean_df_shape[0]-1,0])
+    return (mean_df,float(mean_df.iloc[mean_df_shape[0]-1,0]))
+print("Started get_ticker_sentiment")
+start = tm.time()
+print(get_ticker_sentiment("AAPL"))
+stop = tm.time()
+
+start1 = tm.time()
+print("Started get_sentiment_sp500")
+print(get_sentiment_sp500())
+stop1 = tm.time()
+
+print("Started get_sp500")
+start2 = tm.time()
+print(get_sp500())
+stop2 = tm.time()
+
+print(stop-start) #0.1654 s - faster to execute specific ticker searches
+print(stop1-start1) #164.1693 s (2 mins 44.1693 s) - good if i want to just load a bunch of tickers at once but other two work much faster (<1s)
+print(stop2-start2) #0.5646 s - faster to get a list of all tickers
+# #plotting will get expensive really quickly so might just make a nice looking scale to show the current sentiment (might add drop down showing previous entries)
 # plt.savefig('compound_info.png')
 # print(mean_df)
 # choice = ''
