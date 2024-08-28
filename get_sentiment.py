@@ -62,7 +62,7 @@ def get_ticker_sentiment(ticker):
     
     # print(mean_df.iloc[mean_df_shape[0]-1,0])
     return (mean_df,float(mean_df.iloc[mean_df_shape[0]-1,0]))
-start = tm.time()
-print(get_ticker_sentiment("AAPL"))
-stop = tm.time()
-print(stop-start)
+# start = tm.time()
+# print(get_ticker_sentiment("AAPL"))
+# stop = tm.time()
+# print(stop-start)

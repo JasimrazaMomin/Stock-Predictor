@@ -1,5 +1,6 @@
 import Logo from './logo';
-import Search from '../../public/search.png'
+// import Search from '../../public/search.png'
+import Link from "next/link"
 
 export default function Header() {
   return (
@@ -13,8 +14,7 @@ export default function Header() {
             <div className="flex-grow flex items-center justify-center">
             <div class="relative w-full">
   <input
-    placeholder="Search any "˘:"tock from the S&P500"
-    placeholder="Search any "˘:"tock from the S&P500"
+    placeholder="Search any stock from the S&P500"
     type="text"
     class="w-full p-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:ring-1 focus:outline-none"
   />
@@ -38,9 +38,9 @@ export default function Header() {
         </div>
 
             <nav className="flex gap-6 pr-10">
-                <a href="http://localhost:3000/" className="text-gray-500 hover:text-gray-700">Home</a>
-                <a href="http://localhost:3000/watchlist" className="text-gray-500 hover:text-gray-700">Watchlist</a>
-                <a href="http://localhost:3000/about" className="text-gray-500 hover:text-gray-700">About</a>
+                <Link href="/" className="text-gray-500 hover:text-gray-700">Home</Link>
+                <Link href="/watchlist" className="text-gray-500 hover:text-gray-700">Watchlist</Link>
+                <Link href="/about" className="text-gray-500 hover:text-gray-700">About</Link>
                 <a href="https://github.com/JasimrazaMomin/Stock-Predictor" className="text-gray-500 hover:text-gray-700" target='_blank'>GitHub</a>
             </nav>
         </div>
