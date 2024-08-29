@@ -47,22 +47,57 @@ def get_ticker_sentiment():
         
         for row in news_table.findAll('tr'):
             
-            headline = row.a.text
-            timestamp = row.td.text.strip().split(" ")
+            # first_td = row.find_all('td')[0]  # Get the first <td>
+            # timestamp_info = first_td.text.strip().split(" ")
             
+            # if len(timestamp_info) == 2:
+            #     date = timestamp_info[0]
+            #     time = timestamp_info[1]
+            # elif len(timestamp_info) == 1:
+            #     time = timestamp_info[0]
+            #     # Handle missing time if necessary
+            # else:
+            #     continue  # Skip rows that do not fit the expected format
+            
+            # # Extract the headline from the second <td> > first <div> > first <div> > <a>
+            # headline_td = row.find_all('td')[1]  # Get the second <td>
+            # first_div = headline_td.find('div')  # First <div>
+            # second_div = first_div.find('div')  # Second <div>
+            # headline = second_div.find('a').text if second_div else "N/A"
+
+            # parsed_data.append([ticker, date, time, headline])
+            
+            td_elements = row.find_all('td')
+            if len(td_elements) < 2:
+                continue  # Skip if less than 2 <td> elements
+            first_td = td_elements[0]
+            timestamp = first_td.text.strip().split(" ")
             if len(timestamp) == 1:
                 time = timestamp[0]
+                date = 'Today'
             else:
-                date = timestamp[0]
                 time = timestamp[1]
-                
-            parsed_data.append([ticker, date, time, headline])
+                date = timestamp[0]
+            second_td = td_elements[1]
+            # Within the second <td>, find the first <div>
+            first_div = second_td.find('div')
+            if first_div:
+                # Within the first <div>, find the first <div>
+                inner_div = first_div.find('div')
+                if inner_div:
+                    # Within the inner <div>, find the <a> tag and get its text
+                    a_tag = inner_div.find('a')
+                    if a_tag:
+                        headline = a_tag.text
+                        timestamp = second_td.text.strip().split(" ")
+                            
+                        parsed_data.append([ticker, date, time, headline])
 
     df = pd.DataFrame(parsed_data, columns=['ticker', 'date', 'time', 'headline'])
     vader = SentimentIntensityAnalyzer()
     today = datetime.today().date()
     todays_date = datetime.today().strftime("%b-%d-%y")
-
+    
     df['compound'] = df['headline'].apply(lambda x : vader.polarity_scores(x)['compound'])
     df['date'] = df['date'].apply(lambda x : todays_date if x == 'Today' else x)
 
@@ -98,4 +133,4 @@ def get_ticker_sentiment():
 # print(stop-start)
 
 if __name__ == '__main__':
-    app.run(debug=True,port=5000)
+    app.run(host='0.0.0.0',port=5000)
