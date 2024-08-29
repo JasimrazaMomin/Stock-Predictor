@@ -12,7 +12,7 @@ export default function Home() {
           <p className="text-gray-500 text-lg">Stay ahead with real-time updates on the S&P 500. Monitor trends, analyze performance, and make informed investment decisions effortlessly.</p>
         </div>
         <div className="mt-12">
-          <img className='grayscale-50 h-[50vh] w-[100vw] object-cover' src='https://assets.entrepreneur.com/content/3x2/2000/1673985418-ENT-StockTradingBundle.jpeg'/>
+          <img className='grayscale-50 h-[50vh] w-[100vw] object-cover' src='https://assets.entrepreneur.com/content/3x2/2000/1673985418-ENT-StockTradingBundle.jpeg' alt="picture of person looking at stocks on their phone in front of a computer with stocks on the screen"/>
         </div>
       </main>
     </div>
